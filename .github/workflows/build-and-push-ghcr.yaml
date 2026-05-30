@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - pdsv2
+      - divy/pds-0.5.1
     tags:
       - v*
 env:
