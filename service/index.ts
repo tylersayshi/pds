@@ -24,6 +24,20 @@ const main = async () => {
   });
 };
 
+// Operator subdomains that should get on-demand TLS certs even though they are
+// not user handles — e.g. the admin dashboard / atcr-webhook host
+// (admin.laugh.town). They match the `*.laugh.town` on-demand policy in Caddy, so
+// the `ask` endpoint (checkHandleRoute) is consulted for them; without this they
+// fall through to the 404 below and Caddy refuses to issue, breaking their TLS.
+// (The PDS service hostname is already approved separately via service.hostname.)
+// Configurable via PDS_ONDEMAND_ALLOW_HOSTS (comma-separated); admin.laugh.town is
+// included by default so the fix works without touching the box env.
+const OPERATOR_TLS_HOSTS = new Set(
+  ["admin.laugh.town", ...(process.env.PDS_ONDEMAND_ALLOW_HOSTS ?? "").split(",")]
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean),
+);
+
 async function checkHandleRoute(pds: PDS, req: Request, res: Response) {
   try {
     const { domain } = req.query;
@@ -34,6 +48,9 @@ async function checkHandleRoute(pds: PDS, req: Request, res: Response) {
       });
     }
     if (domain === pds.ctx.cfg.service.hostname) {
+      return res.json({ success: true });
+    }
+    if (OPERATOR_TLS_HOSTS.has(domain.toLowerCase())) {
       return res.json({ success: true });
     }
     const isHostedHandle = pds.ctx.cfg.identity.serviceHandleDomains.find(
