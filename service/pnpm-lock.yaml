@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@atproto/oauth-provider@0.19.5':
+    hash: rw7f4jea7mouh53uvyprav5noi
+    path: patches/@atproto__oauth-provider@0.19.5.patch
   '@atproto/pds@0.5.9':
     hash: 2mxhfcxnydulzfrijrifouf5qe
     path: patches/@atproto__pds@0.5.9.patch
@@ -515,7 +518,7 @@ packages:
       '@atproto/oauth-provider-api': 0.7.2
     dev: false
 
-  /@atproto/oauth-provider@0.19.5:
+  /@atproto/oauth-provider@0.19.5(patch_hash=rw7f4jea7mouh53uvyprav5noi):
     resolution: {integrity: sha512-7gEUzvMqa2NT/grh2h1tZ6iveBIfETtRAZtqSDkSaAR/zJIKxLE3G8oC1N8iZ0NnZfrOtudktx1YRw5rXkr+vA==}
     engines: {node: '>=22'}
     dependencies:
@@ -549,6 +552,7 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: false
+    patched: true
 
   /@atproto/oauth-scopes@0.5.2:
     resolution: {integrity: sha512-1bFYot+64HDzwE0wRdvtbfXTY/H4WASZgHDHYCkaqNoGXI7rR/Bc27QEtLQQPokc/OS5BixBj7GmGeI8T8T3ZA==}
@@ -585,7 +589,7 @@ packages:
       '@atproto/lex-cbor': 0.1.2
       '@atproto/lex-data': 0.1.3
       '@atproto/lex-json': 0.1.2
-      '@atproto/oauth-provider': 0.19.5
+      '@atproto/oauth-provider': 0.19.5(patch_hash=rw7f4jea7mouh53uvyprav5noi)
       '@atproto/oauth-scopes': 0.5.2
       '@atproto/repo': 0.10.2
       '@atproto/syntax': 0.6.3

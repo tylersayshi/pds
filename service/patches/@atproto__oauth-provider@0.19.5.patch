@@ -1,0 +1,21 @@
+diff --git a/dist/router/create-authorization-page-middleware.js b/dist/router/create-authorization-page-middleware.js
+index d0869ae74ae6af81ad6a1c4aa8cd8ab1abd85a9f..0972c0ece7cc79d98f260f6e8f5f6209854b3ea3 100644
+--- a/dist/router/create-authorization-page-middleware.js
++++ b/dist/router/create-authorization-page-middleware.js
+@@ -27,7 +27,15 @@ export function createAuthorizationPageMiddleware(server, { onError }) {
+         // well as refreshing the authorization page).
+         // @TODO Consider removing this altogether to allow hosting PDS and app on
+         // the same site but different origins (different subdomains).
+-        validateFetchSite(req, ['same-origin', 'cross-site', 'none']);
++        // laugh.town patch: allow 'same-site' so the OAuth redirect from the app
++        // (laugh.town) to the AS/PDS (bag.laugh.town) — sibling subdomains of the
++        // same registrable domain — is accepted. Without it the first navigation
++        // sends Sec-Fetch-Site: same-site and is rejected ("data you submitted is
++        // invalid"); only a manual reload (Sec-Fetch-Site: none) worked. This is
++        // exactly the sibling-subdomain case the @TODO above calls out. Mode/dest/
++        // origin are still enforced, so only a top-level document navigation from
++        // our own site is accepted.
++        validateFetchSite(req, ['same-origin', 'same-site', 'cross-site', 'none']);
+         validateFetchMode(req, ['navigate']);
+         validateFetchDest(req, ['document']);
+         validateOrigin(req, issuerOrigin);

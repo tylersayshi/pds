@@ -16,7 +16,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "@atproto/pds@0.5.9": "patches/@atproto__pds@0.5.9.patch"
+      "@atproto/pds@0.5.9": "patches/@atproto__pds@0.5.9.patch",
+      "@atproto/oauth-provider@0.19.5": "patches/@atproto__oauth-provider@0.19.5.patch"
     }
   }
 }
