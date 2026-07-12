@@ -1,0 +1,37 @@
+# ── Changes to make in the bag box's /pds/compose.yaml ────────────────────────
+# This is a SNIPPET, not a full compose file — merge these into the existing one.
+
+# 1) Repoint the pds service at the fork image (was ghcr.io/bluesky-social/pds:latest):
+#
+#   services:
+#     pds:
+#       image: atcr.io/laugh.town/pds:latest
+#       # ...everything else (env_file, volumes, ports) stays as-is
+#
+# 2) REMOVE the watchtower service entirely — the deployer replaces it. Delete the
+#    whole `watchtower:` block (and any `com.centurylinklabs.watchtower.*` labels).
+#
+# 3) ADD the deployer service below. It builds from ./deployer (copy the deploy/box/
+#    deployer/ dir onto the box, e.g. to /pds/deployer), mounts the Docker socket so it
+#    can run compose, and mounts /pds so it can read this compose file.
+
+services:
+  deployer:
+    build: ./deployer
+    restart: unless-stopped
+    environment:
+      # Set on the box (do NOT commit the real value). Matches atcr's webhook signing secret.
+      ATCR_WEBHOOK_SECRET: ${ATCR_WEBHOOK_SECRET}
+      COMPOSE_FILE: /pds/compose.yaml
+      DEPLOY_SERVICE: pds
+      DEPLOY_TAG: latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # root-equivalent; only reachable via Caddy + HMAC
+      - /pds:/pds:ro                                 # read the compose file (image swap needs no write)
+      # atcr registry creds. The docker CLI runs INSIDE this container, so it reads auth from
+      # the container's ~/.docker/config.json — mount the host login (see `docker login atcr.io`).
+      # Adjust the host path to wherever you ran `docker login` (root -> /root/.docker/config.json).
+      - /root/.docker/config.json:/root/.docker/config.json:ro
+    # Not published to the host — Caddy reaches it over the compose network by service name.
+    expose:
+      - "8787"

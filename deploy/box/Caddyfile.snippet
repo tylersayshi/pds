@@ -1,0 +1,20 @@
+# ── Caddy route for the atcr webhook ──────────────────────────────────────────
+# Add this to the bag box's Caddy config, inside the admin.laugh.town site block
+# (the deployer is not published to the host; Caddy reaches it over the compose
+# network by the service name `deployer`).
+#
+# If Caddy runs as its own compose service, make sure it shares a network with
+# `deployer` so the name resolves.
+
+admin.laugh.town {
+    # ... existing admin dashboard config (basic auth, reverse_proxy, etc.) ...
+
+    # atcr image-push webhook -> deployer. No auth here: the deployer verifies the
+    # HMAC signature itself, and atcr can't send the Basic-auth header.
+    handle /hooks/atcr {
+        reverse_proxy deployer:8787
+    }
+}
+
+# Alternative: give the deployer its own hostname instead of a path under admin,
+# e.g. deploy.laugh.town { reverse_proxy deployer:8787 }, and point atcr there.
