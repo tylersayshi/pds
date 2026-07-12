@@ -1,0 +1,54 @@
+# Canonical Caddyfile for the bag.laugh.town PDS box.
+#
+# Deployed at /pds/caddy/etc/caddy/Caddyfile (mounted into the `caddy` container
+# as /etc/caddy/Caddyfile). This is the source of truth — if you change it on the
+# box, mirror it here. To apply a change: edit /pds/caddy/etc/caddy/Caddyfile on
+# the box, then `docker exec caddy caddy validate --config /etc/caddy/Caddyfile`
+# and `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`.
+#
+# TLS notes (learned the hard way):
+# - On-demand TLS is gated by the `ask` endpoint (checkHandleRoute in
+#   service/index.ts): it approves the PDS service hostname, hosted user handles
+#   (<name>.laugh.town), and the operator hosts in OPERATOR_TLS_HOSTS
+#   (admin.laugh.town). A hostname the ask denies gets no cert and fails the TLS
+#   handshake with a silent "internal error" (no Caddy log).
+# - The on-demand wildcard MUST be `*.laugh.town` (NOT `*.bag.laugh.town`) — user
+#   handles are <name>.laugh.town, and handle resolution (bsky.social fetching
+#   https://<handle>.laugh.town/.well-known/atproto-did) needs a per-handle cert.
+# - `admin.laugh.town` also matches `*.laugh.town`; while that wildcard is a
+#   managed on-demand policy, Caddy will NOT serve a *dedicated* managed cert for
+#   admin (it gets shadowed and silently serves nothing). So admin.laugh.town
+#   carries its own `tls { on_demand }` and is approved by the ask — otherwise its
+#   TLS goes dark, taking the admin dashboard AND the atcr deploy webhook
+#   (admin.laugh.town/hooks/atcr -> deployer) down with it.
+
+{
+	email help@laugh.town
+	on_demand_tls {
+		ask http://localhost:3000/tls-check
+	}
+}
+
+*.laugh.town, bag.laugh.town {
+	tls {
+		on_demand
+	}
+	reverse_proxy http://localhost:3000
+}
+
+admin.laugh.town {
+	# Own on-demand tls: admin matches the *.laugh.town wildcard, and a dedicated
+	# managed cert gets shadowed by it (serves nothing). On-demand + the ask
+	# (checkHandleRoute approves admin.laugh.town) issues and serves it reliably.
+	tls {
+		on_demand
+	}
+	# atcr image-push webhook -> deployer (HMAC-verified by the deployer itself).
+	handle /hooks/atcr {
+		reverse_proxy 127.0.0.1:8788
+	}
+	# everything else -> pds-operator admin dashboard.
+	handle {
+		reverse_proxy 127.0.0.1:8787
+	}
+}

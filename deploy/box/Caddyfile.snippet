@@ -1,4 +1,8 @@
 # ── Caddy route for the atcr webhook ──────────────────────────────────────────
+# NOTE: the full canonical box Caddyfile now lives at deploy/box/Caddyfile (which
+# already includes this /hooks/atcr route). This snippet is kept for reference /
+# for adding the route to a pre-existing Caddy config.
+#
 # Add this to the bag box's Caddy config, inside the admin.laugh.town site block
 # (the deployer is not published to the host; Caddy reaches it over the compose
 # network by the service name `deployer`).
