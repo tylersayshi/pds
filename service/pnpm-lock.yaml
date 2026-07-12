@@ -4,10 +4,15 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@atproto/pds@0.5.9':
+    hash: 2mxhfcxnydulzfrijrifouf5qe
+    path: patches/@atproto__pds@0.5.9.patch
+
 dependencies:
   '@atproto/pds':
     specifier: 0.5.9
-    version: 0.5.9
+    version: 0.5.9(patch_hash=2mxhfcxnydulzfrijrifouf5qe)
 
 devDependencies:
   '@atproto/lex':
@@ -562,7 +567,7 @@ packages:
       zod: 3.25.76
     dev: false
 
-  /@atproto/pds@0.5.9:
+  /@atproto/pds@0.5.9(patch_hash=2mxhfcxnydulzfrijrifouf5qe):
     resolution: {integrity: sha512-scHa3kmKCQhraMyf8CenX0HEF6QD4GVufflB3D1B8AjOdAQQY5Ay+TGPaYBXqSUFLl0oEKe//tWWU5DyUZmN5A==}
     engines: {node: '>=22'}
     dependencies:
@@ -617,6 +622,7 @@ packages:
       - supports-color
       - utf-8-validate
     dev: false
+    patched: true
 
   /@atproto/repo@0.10.1:
     resolution: {integrity: sha512-W7ZF8lI/u4se9aovHz60IKOYXSwEE4OPT7ZQYI2e75SXwP23e2WHmvkLqLsQbqDTLffVpOqSJXFwNRtVTGK9yw==}

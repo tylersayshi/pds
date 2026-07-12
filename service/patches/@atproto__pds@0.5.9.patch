@@ -1,0 +1,23 @@
+diff --git a/dist/account-manager/helpers/account.js b/dist/account-manager/helpers/account.js
+index cbc524365d05b74c7d11205fe09ec96570a3d9dd..4756be7c11d523760ed8af1942da8bd9e548ede7 100644
+--- a/dist/account-manager/helpers/account.js
++++ b/dist/account-manager/helpers/account.js
+@@ -167,7 +167,17 @@ export const updateAccountTakedownStatus = async (db, did, takedown) => {
+     const takedownRef = takedown.applied
+         ? takedown.ref ?? currentDatetimeString()
+         : null;
+-    await db.executeWithRetry(db.db.updateTable('actor').set({ takedownRef }).where('did', '=', did));
++    // laugh.town patch: release the account's handle when it is taken down so the
++    // handle can be re-registered. Upstream leaves the handle on the taken-down
++    // actor row; because the createAccount availability check excludes taken-down
++    // rows (getAccount defaults includeTakenDown:false), a re-registration of that
++    // handle sails past the guard and instead collides on the actor.handle unique
++    // index, throwing a non-XRPC UserAlreadyExistsError -> unhandled 500. Nulling
++    // the handle here frees it cleanly (handle is nullable; SQLite treats NULLs as
++    // distinct in the unique index). Note: a takedown does not restore the handle
++    // if later reverted, and we do not sequence a #handle firehose event here.
++    const values = takedown.applied ? { takedownRef, handle: null } : { takedownRef };
++    await db.executeWithRetry(db.db.updateTable('actor').set(values).where('did', '=', did));
+ };
+ export const deactivateAccount = async (db, did, deleteAfter) => {
+     const [res] = await db.executeWithRetry(db.db
