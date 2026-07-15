@@ -17,6 +17,9 @@ const main = async () => {
   pds.app.get("/tls-check", (req, res) => {
     checkHandleRoute(pds, req, res);
   });
+  pds.app.get("/deploy-check", (req, res) => {
+    res.json({ deployed: true, version: env.version });
+  });
   process.on("SIGTERM", async () => {
     httpLogger.info("pds is stopping");
     await pds.destroy();
