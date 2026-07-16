@@ -23,19 +23,21 @@
 #   otherwise its TLS goes dark, taking the admin dashboard AND the atcr deploy
 #   webhook (admin.laugh.town/hooks/atcr -> deployer) down with it.
 #
-# 2026-07-16 incident: a restart of the `pds.service` flushed Caddy's in-memory
-# cert cache. On reload, on-demand TLS re-runs the `ask` check even for a
-# hostname with an already-valid cert on disk — and the `:latest` image
+# 2026-07-16 incident (resolved): a restart of `pds.service` flushed Caddy's
+# in-memory cert cache. On reload, on-demand TLS re-runs the `ask` check even
+# for a hostname with an already-valid cert on disk — and the `:latest` image
 # running on the box at the time didn't have the /tls-check route at all (it
 # had been built by atproto's own `.github/workflows/build-push.yml`, which
-# pushes to the same `atcr.io/laugh.town/pds:latest` tag as this repo's
-# pipeline and was clobbering the real image — a separate issue, not yet
-# resolved). `ask` 404'd, Caddy refused to serve bag.laugh.town/admin.laugh.town
-# at all, both went down. Until that's sorted, bag.laugh.town and
-# admin.laugh.town load their already-issued certs directly instead of
-# on_demand, so a Caddy restart can never again depend on /tls-check working.
-# Revert to `tls { on_demand }` for both once the real image (with
-# /tls-check) is confirmed to be what's actually running.
+# pushed to the same `atcr.io/laugh.town/pds:latest` tag as this repo's
+# pipeline and was silently clobbering the real image). `ask` 404'd, Caddy
+# refused to serve bag.laugh.town/admin.laugh.town at all, both went down.
+# Fixed by: deleting the conflicting atproto workflow (this repo's pipeline is
+# now the sole source of the image) and cutting v0.4.5012-lt.3 to redeploy the
+# real image. /tls-check confirmed working again (curl'd directly), so both
+# hosts are back on managed on_demand below — do NOT pin static cert files
+# here again except as a short-lived emergency measure: Caddy does not
+# auto-renew explicitly-specified `tls <crt> <key>` certs, so leaving that in
+# place would just trade this outage for a cert-expiry outage in ~3 months.
 {
 	email help@laugh.town
 	on_demand_tls {
@@ -43,20 +45,20 @@
 	}
 }
 
-*.laugh.town {
+*.laugh.town, bag.laugh.town {
 	tls {
 		on_demand
 	}
 	reverse_proxy http://localhost:3000
 }
 
-bag.laugh.town {
-	tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/bag.laugh.town/bag.laugh.town.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/bag.laugh.town/bag.laugh.town.key
-	reverse_proxy http://localhost:3000
-}
-
 admin.laugh.town {
-	tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/admin.laugh.town/admin.laugh.town.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/admin.laugh.town/admin.laugh.town.key
+	# Own on-demand tls: admin matches the *.laugh.town wildcard, and a dedicated
+	# managed cert gets shadowed by it (serves nothing). On-demand + the ask
+	# (checkHandleRoute approves admin.laugh.town) issues and serves it reliably.
+	tls {
+		on_demand
+	}
 	# atcr image-push webhook -> deployer (HMAC-verified by the deployer itself).
 	handle /hooks/atcr {
 		reverse_proxy 127.0.0.1:8788
