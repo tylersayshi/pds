@@ -6,6 +6,7 @@
 # the box, then `docker exec caddy caddy validate --config /etc/caddy/Caddyfile`
 # and `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`.
 #
+
 # TLS notes (learned the hard way):
 # - On-demand TLS is gated by the `ask` endpoint (checkHandleRoute in
 #   service/index.ts): it approves the PDS service hostname, hosted user handles
@@ -18,10 +19,23 @@
 # - `admin.laugh.town` also matches `*.laugh.town`; while that wildcard is a
 #   managed on-demand policy, Caddy will NOT serve a *dedicated* managed cert for
 #   admin (it gets shadowed and silently serves nothing). So admin.laugh.town
-#   carries its own `tls { on_demand }` and is approved by the ask — otherwise its
-#   TLS goes dark, taking the admin dashboard AND the atcr deploy webhook
-#   (admin.laugh.town/hooks/atcr -> deployer) down with it.
-
+#   normally carries its own `tls { on_demand }`, approved by the ask —
+#   otherwise its TLS goes dark, taking the admin dashboard AND the atcr deploy
+#   webhook (admin.laugh.town/hooks/atcr -> deployer) down with it.
+#
+# 2026-07-16 incident: a restart of the `pds.service` flushed Caddy's in-memory
+# cert cache. On reload, on-demand TLS re-runs the `ask` check even for a
+# hostname with an already-valid cert on disk — and the `:latest` image
+# running on the box at the time didn't have the /tls-check route at all (it
+# had been built by atproto's own `.github/workflows/build-push.yml`, which
+# pushes to the same `atcr.io/laugh.town/pds:latest` tag as this repo's
+# pipeline and was clobbering the real image — a separate issue, not yet
+# resolved). `ask` 404'd, Caddy refused to serve bag.laugh.town/admin.laugh.town
+# at all, both went down. Until that's sorted, bag.laugh.town and
+# admin.laugh.town load their already-issued certs directly instead of
+# on_demand, so a Caddy restart can never again depend on /tls-check working.
+# Revert to `tls { on_demand }` for both once the real image (with
+# /tls-check) is confirmed to be what's actually running.
 {
 	email help@laugh.town
 	on_demand_tls {
@@ -29,20 +43,20 @@
 	}
 }
 
-*.laugh.town, bag.laugh.town {
+*.laugh.town {
 	tls {
 		on_demand
 	}
 	reverse_proxy http://localhost:3000
 }
 
+bag.laugh.town {
+	tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/bag.laugh.town/bag.laugh.town.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/bag.laugh.town/bag.laugh.town.key
+	reverse_proxy http://localhost:3000
+}
+
 admin.laugh.town {
-	# Own on-demand tls: admin matches the *.laugh.town wildcard, and a dedicated
-	# managed cert gets shadowed by it (serves nothing). On-demand + the ask
-	# (checkHandleRoute approves admin.laugh.town) issues and serves it reliably.
-	tls {
-		on_demand
-	}
+	tls /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/admin.laugh.town/admin.laugh.town.crt /data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/admin.laugh.town/admin.laugh.town.key
 	# atcr image-push webhook -> deployer (HMAC-verified by the deployer itself).
 	handle /hooks/atcr {
 		reverse_proxy 127.0.0.1:8788
